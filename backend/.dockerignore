@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+.env.*
+!.env.example
+*.db
+temp_uploads/
+masked_output/
+weights_cache/
+benchmark_reports/
+tests/fixtures/real/*
+*.pt
+*.onnx

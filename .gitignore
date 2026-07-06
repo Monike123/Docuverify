@@ -1,0 +1,31 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Secrets / local config
+.env
+.env.*
+!.env.example
+token.txt
+../token.txt
+
+# Runtime data
+*.db
+temp_uploads/
+original_uploads/
+masked_output/
+weights_cache/
+benchmark_reports/
+ocr_models/
+
+# Model weights (delivered via Hugging Face Hub, never committed)
+*.pt
+*.pth
+*.onnx
+
+# Frontend
+node_modules/
+dist/
+*.local

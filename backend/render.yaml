@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: docverify-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: standard            # ~2GB RAM; torch + ultralytics + opencv need the headroom
+    healthCheckPath: /health
+    autoDeploy: true
+    disk:
+      name: docverify-data
+      mountPath: /data        # persists SQLite DB, masked images, and weight cache
+      sizeGB: 5
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:////data/docverify.db
+      - key: MASKED_OUTPUT
+        value: /data/masked_output
+      - key: TEMP_UPLOADS
+        value: /tmp/docverify_uploads
+      - key: WEIGHTS_DIR
+        value: /data/weights
+      - key: CORS_ORIGINS
+        sync: false           # set to your Netlify site URL
+      - key: HF_REPO_ID
+        sync: false           # e.g. <user>/docverify-weights
+      - key: HF_TOKEN
+        sync: false           # only if the weights repo is private
+      - key: AADHAAR_WEIGHT_FILE
+        value: best.pt
+      - key: PAN_WEIGHT_FILE
+        value: Pan_best.pt
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        value: manassawant5913@gmail.com
+      - key: SMTP_PASS
+        sync: false           # Gmail App Password
+      - key: ENABLE_REPLY_POLLING
+        value: "false"
+      - key: ENABLE_SCRAPER
+        value: "false"
+      - key: MAX_UPLOAD_BYTES
+        value: "10485760"
+      - key: API_KEY
+        sync: false           # optional; if set, frontend must send X-API-Key

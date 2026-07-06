@@ -1,0 +1,9 @@
+# Dev / optional extras (NOT installed in the lean production image).
+# Install with: pip install -r requirements.txt -r requirements-dev.txt
+-r requirements.txt
+
+pytest>=8.0.0
+
+# Only needed when ENABLE_SCRAPER=true (Selenium company-email discovery).
+selenium>=4.15.0
+webdriver-manager>=4.0.0

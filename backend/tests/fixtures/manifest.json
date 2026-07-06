@@ -1,0 +1,30 @@
+{
+  "caste_sample.pdf": {
+    "doc_type": "caste",
+    "min_score": 50,
+    "required_flags_absent": [
+      "TEXT_EXTRACT_FAILED"
+    ],
+    "required_fields": [
+      "caste_category"
+    ]
+  },
+  "experience_sample.docx": {
+    "doc_type": "experience",
+    "min_score": 40,
+    "required_fields": [
+      "hr_email",
+      "company_name"
+    ],
+    "required_flags_absent": [
+      "NO_EMAIL"
+    ]
+  },
+  "experience_no_email.docx": {
+    "doc_type": "experience",
+    "required_flags": [
+      "NO_EMAIL"
+    ],
+    "expected_status": "Red Flagged"
+  }
+}
