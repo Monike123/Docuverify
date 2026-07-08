@@ -6,6 +6,7 @@ import concurrent.futures
 import json
 import logging
 import threading
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,7 +21,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from config import API_KEY, CORS_ORIGINS, MASKED_OUTPUT, ORIGINAL_UPLOADS
+from config import API_KEY, CORS_ORIGINS, MASKED_OUTPUT, ORIGINAL_UPLOADS, WORKSPACE_ROOT
 from database import Base, engine, get_db
 from gov_stubs.verify_stub import gov_verify_stub
 from models import Document
@@ -38,6 +39,23 @@ from services.experience_service import verify_experience
 from services.storage_service import ensure_dirs, get_upload_path, save_upload, validate_upload
 
 logger = logging.getLogger("docverify")
+
+
+def _debug_log(hypothesis_id: str, location: str, message: str, data: dict) -> None:
+    try:
+        payload = {
+            "sessionId": "8197a1",
+            "runId": "startup-db-url",
+            "hypothesisId": hypothesis_id,
+            "location": location,
+            "message": message,
+            "data": data,
+            "timestamp": int(time.time() * 1000),
+        }
+        with (WORKSPACE_ROOT / "debug-8197a1.log").open("a", encoding="utf-8") as f:
+            f.write(json.dumps(payload, separators=(",", ":")) + "\n")
+    except Exception:
+        pass
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
 
@@ -84,7 +102,21 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 @app.on_event("startup")
 def startup():
-    Base.metadata.create_all(bind=engine)
+    # #region agent log
+    _debug_log("H1-H4", "main.py:103", "startup_begin", {"step": "create_all"})
+    # #endregion
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as exc:
+        # #region agent log
+        _debug_log(
+            "H1-H4",
+            "main.py:107",
+            "startup_create_all_failed",
+            {"error_type": type(exc).__name__, "error_text": str(exc)[:240]},
+        )
+        # #endregion
+        raise
     ensure_dirs()
     MASKED_OUTPUT.mkdir(parents=True, exist_ok=True)
     ORIGINAL_UPLOADS.mkdir(parents=True, exist_ok=True)

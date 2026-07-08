@@ -1,5 +1,6 @@
 -- DocVerify AI — Supabase Schema
--- Run this in your Supabase SQL Editor: https://supabase.com/dashboard/project/uymdjpfognbqcsotjztr/sql
+-- Run this in your Supabase SQL Editor:
+-- https://supabase.com/dashboard/project/uymdjpfognbqcsotjztr/sql
 
 CREATE TABLE IF NOT EXISTS documents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -20,9 +21,49 @@ CREATE TABLE IF NOT EXISTS documents (
   reviewed_at TIMESTAMPTZ,
   image_base64 TEXT,
   masked_image_base64 TEXT,
+  -- ── Gemini AI fields ──────────────────────────────────────────────────
+  gemini_raw_json TEXT,          -- full raw JSON from Gemini (for future ML use)
+  forgery_score DOUBLE PRECISION,-- 0-100 (0=clean, 100=likely fake)
+  forgery_reason TEXT,           -- Gemini's evidence-based reason string
+  ai_confidence DOUBLE PRECISION,-- Gemini's extraction certainty 0-100
+  ai_powered BOOLEAN DEFAULT FALSE, -- true when Gemini successfully analyzed
+  gemini_model VARCHAR(64),      -- model name (e.g. gemini-3-flash)
+  gemini_key_index INTEGER,      -- which key in pool was used (for monitoring)
+  -- ─────────────────────────────────────────────────────────────────────
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Indexes for dashboard queries
+CREATE INDEX IF NOT EXISTS idx_documents_status ON documents(status);
+CREATE INDEX IF NOT EXISTS idx_documents_doc_type ON documents(doc_type);
+CREATE INDEX IF NOT EXISTS idx_documents_created_at ON documents(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_documents_ai_powered ON documents(ai_powered);
+
+-- ── ADD COLUMNS to existing Supabase project (run if table already exists) ──
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS gemini_raw_json TEXT;
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS forgery_score DOUBLE PRECISION;
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS forgery_reason TEXT;
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS ai_confidence DOUBLE PRECISION;
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS ai_powered BOOLEAN DEFAULT FALSE;
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS gemini_model VARCHAR(64);
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS gemini_key_index INTEGER;
+
+-- Auto-update updated_at on row changes
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+DROP TRIGGER IF EXISTS update_documents_updated_at ON documents;
+CREATE TRIGGER update_documents_updated_at
+  BEFORE UPDATE ON documents
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
 
 -- Indexes for dashboard queries
 CREATE INDEX IF NOT EXISTS idx_documents_status ON documents(status);

@@ -1,20 +1,29 @@
 [build]
-  base = "frontend"
-  command = "npm run build"
+  # Path from repo root to the frontend folder
+  base    = "docverify/frontend"
+  command = "npm ci && npm run build"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "20"
+  # VITE_API_URL must be set in Netlify → Site Settings → Environment Variables
+  # Value: https://Monike123-extraction-validate.hf.space  (your HF Space URL)
 
-# SPA fallback so client-side routes (e.g. /result/:id) resolve to index.html
+# SPA fallback — all client-side routes resolve to index.html
 [[redirects]]
-  from = "/*"
-  to = "/index.html"
+  from   = "/*"
+  to     = "/index.html"
   status = 200
 
 [[headers]]
   for = "/*"
   [headers.values]
     X-Content-Type-Options = "nosniff"
-    X-Frame-Options = "DENY"
-    Referrer-Policy = "no-referrer"
+    X-Frame-Options        = "SAMEORIGIN"
+    Referrer-Policy        = "strict-origin-when-cross-origin"
+    Cache-Control          = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

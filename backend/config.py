@@ -1,5 +1,8 @@
+import json
 import os
+import time
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
 
@@ -9,10 +12,57 @@ BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parent
 WORKSPACE_ROOT = PROJECT_ROOT.parent
 
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'docverify.db'}")
+RAW_DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'docverify.db'}")
+DATABASE_URL = RAW_DATABASE_URL
 TEMP_UPLOADS = Path(os.getenv("TEMP_UPLOADS", BASE_DIR / "temp_uploads"))
 MASKED_OUTPUT = Path(os.getenv("MASKED_OUTPUT", BASE_DIR / "masked_output"))
 ORIGINAL_UPLOADS = Path(os.getenv("ORIGINAL_UPLOADS", BASE_DIR / "original_uploads"))
+
+
+def _debug_log(hypothesis_id: str, location: str, message: str, data: dict) -> None:
+    try:
+        payload = {
+            "sessionId": "8197a1",
+            "runId": "startup-db-url",
+            "hypothesisId": hypothesis_id,
+            "location": location,
+            "message": message,
+            "data": data,
+            "timestamp": int(time.time() * 1000),
+        }
+        with (WORKSPACE_ROOT / "debug-8197a1.log").open("a", encoding="utf-8") as f:
+            f.write(json.dumps(payload, separators=(",", ":")) + "\n")
+    except Exception:
+        pass
+
+
+# #region agent log
+try:
+    _split = urlsplit(DATABASE_URL)
+    _userinfo = _split.netloc.rsplit("@", 1)[0] if "@" in _split.netloc else ""
+    _debug_log(
+        "H1-H4",
+        "config.py:18",
+        "database_url_loaded",
+        {
+            "scheme": _split.scheme,
+            "hostname": _split.hostname,
+            "port": _split.port,
+            "username": _split.username,
+            "netloc_at_count": _split.netloc.count("@"),
+            "userinfo_has_brackets": "[" in _userinfo or "]" in _userinfo,
+            "userinfo_has_raw_at": "@" in _userinfo,
+            "is_sqlite": DATABASE_URL.startswith("sqlite"),
+        },
+    )
+except Exception as exc:
+    _debug_log(
+        "H1-H4",
+        "config.py:18",
+        "database_url_parse_failed",
+        {"error_type": type(exc).__name__},
+    )
+# #endregion
 
 # --- EasyOCR Configuration ---
 EASYOCR_LANGUAGES = ["en"]
@@ -72,6 +122,12 @@ FREE_EMAIL_DOMAINS = {"gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "r
 
 # ── Gemini Vision AI ─────────────────────────────────────────────────────
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+# Comma-separated failover key pool (primary key always prepended)
 GEMINI_API_KEYS = [k.strip() for k in os.getenv("GEMINI_API_KEYS", "").split(",") if k.strip()]
+# gemini-3-flash: 1000 RPD free, 1M context, agentic vision on images
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash")
 GEMINI_ENABLED = bool(GEMINI_API_KEY or GEMINI_API_KEYS)
+# Image sent to Gemini: max dimension (higher = better accuracy, more tokens)
+GEMINI_MAX_IMAGE_DIMENSION = int(os.getenv("GEMINI_MAX_IMAGE_DIMENSION", "1024"))
+# PDF rendering DPI for Gemini image conversion
+GEMINI_PDF_DPI = int(os.getenv("GEMINI_PDF_DPI", "150"))
