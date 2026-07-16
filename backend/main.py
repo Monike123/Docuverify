@@ -102,26 +102,29 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 @app.on_event("startup")
 def startup():
-    # #region agent log
     _debug_log("H1-H4", "main.py:103", "startup_begin", {"step": "create_all"})
-    # #endregion
     try:
         Base.metadata.create_all(bind=engine)
+        logger.info("Database tables verified/created OK")
     except Exception as exc:
-        # #region agent log
+        # Log clearly but DON'T raise — lets HF container stay alive
+        # even if Supabase pooler hasn't warmed up yet.
+        # Health endpoint will reflect DB status.
+        logger.critical(
+            "DB connection failed at startup (check DATABASE_URL + Supabase pooler): %s",
+            exc
+        )
         _debug_log(
-            "H1-H4",
-            "main.py:107",
-            "startup_create_all_failed",
+            "H1-H4", "main.py:107", "startup_create_all_failed",
             {"error_type": type(exc).__name__, "error_text": str(exc)[:240]},
         )
-        # #endregion
-        raise
+        # Do NOT re-raise — app continues without crashing
     ensure_dirs()
     MASKED_OUTPUT.mkdir(parents=True, exist_ok=True)
     ORIGINAL_UPLOADS.mkdir(parents=True, exist_ok=True)
     # Pre-warm EasyOCR in background — model loads once, all requests stay fast
     threading.Thread(target=_prewarm_ocr, daemon=True, name="ocr-prewarm").start()
+
 
 
 def _prewarm_ocr():
