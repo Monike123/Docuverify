@@ -1,6 +1,6 @@
 [build]
   # Path from repo root to the frontend folder
-  base    = "docverify/frontend"
+  base    = "frontend"
   command = "npm ci && npm run build"
   publish = "dist"
 
